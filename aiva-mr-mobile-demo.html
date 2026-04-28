@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>AIVA — MR Mobile CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,-50..200&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;font-family:'Roboto',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#DDDDDD;overflow:hidden;color:#000}
+:root{
+  --brand:#196FE1;--brand-h:#0F58BC;--brand-soft:#E8F1FE;--brand-text:#0F4FB1;
+  --bg:#fff;--bg-alt:#F0F0F2;
+  --divider:#DFDFDF;--div-soft:#EAEAEA;
+  --ink:#000;--ink-mid:rgba(0,0,0,.68);--ink-soft:rgba(0,0,0,.50);--ink-faint:rgba(0,0,0,.28);
+  --ok:#0E8345;--ok-soft:#E5F6EE;--ok-border:#B6DEC9;
+  --warn:#9B5C00;--warn-soft:#FFF4E0;--warn-border:#E8C97A;
+  --err:#C5311E;--err-soft:#FCE8E5;--err-border:#EBA99F;
+  --red:#EB0000;
+  --aiva:#7B61FF;--aiva-d:#5A41E0;--aiva-soft:#EFEAFF;--aiva-ink:#3B2E8A;--aiva-border:#C9B8FF;
+  --nav:#0A0A0A;
+  --r4:4px;--r8:8px;--r12:12px;--r16:16px;--rpill:999px;
+  --s1:0 1px 2px rgba(0,0,0,.05),0 1px 4px rgba(0,0,0,.04);
+  --s2:0 4px 16px rgba(0,0,0,.08);
+}
+@keyframes blink    {0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes orb-pulse{0%{box-shadow:0 0 0 0 rgba(123,97,255,.5)}70%{box-shadow:0 0 0 10px rgba(123,97,255,0)}100%{box-shadow:0 0 0 0 rgba(123,97,255,0)}}
+@keyframes mic-pulse{0%,100%{box-shadow:0 6px 20px rgba(123,97,255,.55),0 0 0 0 rgba(123,97,255,.3)}70%{box-shadow:0 6px 20px rgba(123,97,255,.55),0 0 0 14px rgba(123,97,255,0)}}
+@keyframes bar      {0%,100%{transform:scaleY(.28)}50%{transform:scaleY(1)}}
+@keyframes fade-up  {from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slide-in {from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes slide-up-sheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes toast-in {from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes scan-line{0%{top:0}50%{top:calc(100% - 2px)}100%{top:0}}
+@keyframes confetti {0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
+@keyframes check-pop{0%{transform:scale(0)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes sla-tick {0%{opacity:1}50%{opacity:.6}100%{opacity:1}}
+
+/* SHELL — fills entire viewport, centers the phone */
+#shell{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:#DDDDDD;
+}
+
+/* PHONE — the full app container */
+#phone{
+  position:relative;
+  width:100%;max-width:430px;
+  height:100%;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  overflow:hidden; /* clips scan overlay etc, NOT the scroll body */
+}
+
+/* SCREEN WRAPPER — sits between top bars and bottom nav, must be flex:1 with min-height:0 */
+.screen-wrap{
+  flex:1;
+  min-height:0;        /* critical: lets flex child shrink below content size */
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  position:relative;
+}
+
+/* SCROLL BODY — the actual scrolling region */
+.scroll-body{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  background:var(--bg-alt);
+}
+.scroll-body::-webkit-scrollbar{display:none}
+
+/* MATERIAL ICON */
+.mi{
+  font-family:'Material Symbols Rounded';font-style:normal;font-weight:normal;
+  line-height:1;letter-spacing:normal;text-transform:none;
+  display:inline-block;white-space:nowrap;direction:ltr;user-select:none;
+  -webkit-font-feature-settings:'liga';font-feature-settings:'liga';
+  -webkit-font-smoothing:antialiased;vertical-align:middle;
+}
+
+/* APP BAR — parent level */
+.abar{flex-shrink:0;background:#fff;border-bottom:1px solid var(--div-soft)}
+.abar-inner{display:flex;align-items:center;padding:10px 4px 8px}
+.abar-text{flex:1;padding:0 10px}
+.abar-title{font-size:22px;font-weight:500;letter-spacing:-.2px;color:var(--ink)}
+.abar-sub{font-size:12px;color:var(--ink-mid);margin-top:1px}
+
+/* APP BAR — child level */
+.cbar{flex-shrink:0;background:#fff;border-bottom:1px solid var(--div-soft);display:flex;align-items:center;padding:8px 4px}
+.cbar-text{flex:1;padding:0 8px;min-width:0}
+.cbar-title{font-size:20px;font-weight:500;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbar-sub{font-size:12px;color:var(--ink-mid);margin-top:1px}
+
+.icon-btn{
+  width:44px;height:44px;border:none;background:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;border-radius:50%;position:relative;
+}
+.icon-btn:active{background:rgba(0,0,0,.06)}
+.bdot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid #fff}
+
+/* AIVA BANNER */
+.aiva-banner{
+  flex-shrink:0;width:100%;
+  display:flex;align-items:center;gap:10px;
+  padding:8px 16px;
+  background:linear-gradient(90deg,var(--aiva-soft) 0%,#F4F0FF 100%);
+  border-top:1px solid var(--aiva-border);
+  border-bottom:1px solid var(--aiva-border);
+  border-left:none;border-right:none;
+  cursor:pointer;text-align:left;
+}
+.aiva-orb{
+  width:22px;height:22px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#B6A6FF,var(--aiva) 65%,var(--aiva-d));
+  flex-shrink:0;
+}
+.aiva-orb.pulse{animation:orb-pulse 1.8s ease-out infinite}
+.aiva-label{font-size:13px;font-weight:500;color:var(--aiva-ink)}
+.aiva-sub{font-size:11px;color:var(--ink-soft);margin-top:1px}
+.wave{display:flex;gap:2px;align-items:flex-end;height:14px;margin-left:auto;flex-shrink:0}
+.wave span{width:3px;border-radius:1.5px;background:var(--aiva);animation:bar .9s ease-in-out infinite;display:block}
+.wave span:nth-child(1){height:5px}.wave span:nth-child(2){height:9px;animation-delay:.1s}
+.wave span:nth-child(3){height:13px;animation-delay:.2s}.wave span:nth-child(4){height:9px;animation-delay:.1s}
+.wave span:nth-child(5){height:6px;animation-delay:.05s}
+
+/* BOTTOM NAV */
+.bnav{
+  flex-shrink:0;height:66px;
+  background:linear-gradient(180deg,#101010 0%,#1A1A1A 100%);
+  display:flex;align-items:flex-start;justify-content:space-around;
+  padding-top:8px;border-top:1px solid rgba(255,255,255,.06);
+}
+.ntab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:none;border:none;cursor:pointer;padding:4px 0;
+  color:rgba(255,255,255,.45);position:relative;font-family:inherit;
+}
+.ntab.on{color:#fff}
+.ntab .mi{font-size:22px}
+.ntab .lbl{font-size:10px;font-weight:500;letter-spacing:.3px}
+.ntab .ndot{
+  width:5px;height:5px;border-radius:50%;background:var(--aiva);
+  position:absolute;top:3px;right:calc(50% - 16px);
+  animation:blink 1.4s ease-in-out infinite;
+}
+
+/* CARDS */
+.card{background:#fff;border-radius:var(--r12);box-shadow:var(--s1)}
+
+/* CHIPS */
+.chip{
+  display:inline-flex;align-items:center;gap:3px;
+  border-radius:var(--rpill);border:1px solid;
+  font-weight:500;letter-spacing:.1px;line-height:1.2;white-space:nowrap;
+  font-size:11px;padding:3px 8px;vertical-align:middle;
+}
+.c-n  {background:#F2F2F2;color:var(--ink);border-color:#DFDFDF}
+.c-b  {background:var(--brand-soft);color:var(--brand-text);border-color:#C9DEFB}
+.c-ok {background:var(--ok-soft);color:var(--ok);border-color:var(--ok-border)}
+.c-w  {background:var(--warn-soft);color:var(--warn);border-color:var(--warn-border)}
+.c-e  {background:var(--err-soft);color:var(--err);border-color:var(--err-border)}
+.c-ai {background:var(--aiva-soft);color:var(--aiva-ink);border-color:var(--aiva-border)}
+.c-dk {background:#1A1A1A;color:#fff;border-color:#1A1A1A}
+
+/* BUTTONS */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  border-radius:var(--r8);font-weight:500;cursor:pointer;font-family:inherit;
+  letter-spacing:.15px;border:1px solid;transition:filter .1s;
+}
+.btn:active{filter:brightness(.88)}
+.b-p  {background:var(--brand);color:#fff;border-color:var(--brand)}
+.b-s  {background:#fff;color:var(--brand);border-color:var(--brand)}
+.b-g  {background:transparent;color:var(--brand);border-color:transparent}
+.b-ai {background:var(--aiva-d);color:#fff;border-color:var(--aiva-d)}
+.b-ok {background:var(--ok);color:#fff;border-color:var(--ok)}
+.b-e  {background:var(--err);color:#fff;border-color:var(--err)}
+.b-sm {font-size:12px;padding:7px 12px;min-height:34px}
+.b-md {font-size:14px;padding:10px 16px;min-height:44px}
+.b-lg {font-size:15px;padding:12px 20px;min-height:52px}
+.b-full{width:100%}
+
+/* FORM INPUTS */
+.inp{width:100%;padding:12px 14px;border:1.5px solid var(--divider);border-radius:var(--r8);font-size:15px;font-family:inherit;color:var(--ink);outline:none;background:#fff}
+.inp:focus{border-color:var(--brand)}
+.lbl{font-size:12px;color:var(--ink-mid);margin-bottom:4px;display:block}
+
+/* TOGGLE SWITCH */
+.tog{width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;position:relative;padding:0;transition:background .2s;flex-shrink:0}
+.tog-t{position:absolute;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.22);transition:left .2s}
+
+/* SEGMENT TABS */
+.seg{display:flex;border-bottom:1px solid var(--div-soft);background:#fff;flex-shrink:0}
+.stab{flex:1;padding:11px 4px;background:none;border:none;cursor:pointer;font-size:13px;font-weight:500;border-bottom:2.5px solid transparent;font-family:inherit;color:var(--ink-mid);transition:color .12s}
+.stab.on{color:var(--brand);border-color:var(--brand);font-weight:600}
+
+/* SECTION HEADER inside card */
+.sec-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px 10px;
+}
+.sec-hdr-left{display:flex;align-items:baseline;gap:8px}
+.sec-hdr h3{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:.05px}
+.sec-hdr .cnt{font-size:12px;color:var(--ink-soft)}
+.sec-hdr .act{font-size:13px;font-weight:500;color:var(--brand);background:none;border:none;cursor:pointer;font-family:inherit;padding:0}
+
+/* DIVIDER ROWS */
+.dr{border-bottom:1px solid var(--div-soft)}
+.dr:last-child{border-bottom:none}
+
+/* TIMELINE ENTRIES */
+.tl-row{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--div-soft)}
+.tl-row:last-child{border-bottom:none}
+.tl-dot{width:28px;height:28px;border-radius:50%;background:#F0F0F2;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+
+/* SLA BADGE */
+.sla-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:var(--rpill);border:1.5px solid}
+
+/* TASK PRIORITY STRIP */
+.priority-strip{width:3px;border-radius:2px;flex-shrink:0;align-self:stretch;min-height:32px}
+
+/* WIZARD STEPS */
+.wiz{display:flex;padding:14px 16px 12px;gap:5px;align-items:center;background:#fff;border-bottom:1px solid var(--div-soft);flex-shrink:0}
+.wstep{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;transition:background .2s}
+.wline{flex:1;height:2px;background:var(--div-soft);border-radius:1px;transition:background .3s}
+.wline.done{background:var(--brand)}
+
+/* CONFIDENCE BAR */
+.conf-w{width:100%;height:4px;background:var(--div-soft);border-radius:2px;margin-top:5px}
+.conf-f{height:4px;border-radius:2px;background:var(--aiva)}
+
+/* DEAL DONE SCREEN */
+.deal-done{position:absolute;inset:0;background:#fff;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;animation:fade-up .35s ease-out}
+.cbit{position:absolute;top:-20px;width:8px;height:8px;border-radius:2px;animation:confetti 1.4s ease-out forwards}
+.confetti-w{position:absolute;top:0;left:0;right:0;height:300px;overflow:hidden;pointer-events:none}
+
+/* SCAN OVERLAY */
+.scan-overlay{position:absolute;inset:0;background:#000;z-index:80;display:flex;flex-direction:column;animation:fade-up .2s ease-out}
+.scan-vf{position:relative;flex:1;background:#0D0F18;overflow:hidden}
+.scan-reticle{position:absolute;left:24px;right:24px;top:50%;transform:translateY(-50%);border:2px solid #fff;border-radius:12px;overflow:hidden;aspect-ratio:1.586;box-shadow:0 0 0 9999px rgba(0,0,0,.55)}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--brand),transparent);animation:scan-line 1.6s ease-in-out infinite}
+.scorn{position:absolute;width:20px;height:20px}
+.scorn.tl{top:-1px;left:-1px;border-top:3px solid var(--brand);border-left:3px solid var(--brand);border-radius:4px 0 0 0}
+.scorn.tr{top:-1px;right:-1px;border-top:3px solid var(--brand);border-right:3px solid var(--brand);border-radius:0 4px 0 0}
+.scorn.bl{bottom:-1px;left:-1px;border-bottom:3px solid var(--brand);border-left:3px solid var(--brand);border-radius:0 0 0 4px}
+.scorn.br{bottom:-1px;right:-1px;border-bottom:3px solid var(--brand);border-right:3px solid var(--brand);border-radius:0 0 4px 0}
+
+/* SIGN IN */
+.signin-wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0A1628 0%,#0D2045 55%,#0F2D5C 100%);z-index:50;padding:40px 32px}
+.si-inp{width:100%;padding:14px 16px;border-radius:var(--r12);background:rgba(255,255,255,.10);border:1.5px solid rgba(255,255,255,.15);color:#fff;font-size:15px;font-family:inherit;outline:none;margin-bottom:12px}
+.si-inp::placeholder{color:rgba(255,255,255,.4)}
+.si-inp:focus{border-color:rgba(123,97,255,.7)}
+.si-btn{width:100%;padding:15px;border-radius:var(--r12);background:var(--brand);color:#fff;font-size:15px;font-weight:600;border:none;cursor:pointer;font-family:inherit;margin-top:4px}
+
+/* TOAST */
+#toast-el{
+  position:fixed;bottom:82px;left:50%;transform:translateX(-50%);
+  background:#1A1A1A;color:#fff;border-radius:var(--rpill);
+  padding:10px 20px;font-size:13px;font-weight:500;
+  box-shadow:0 4px 20px rgba(0,0,0,.35);white-space:nowrap;
+  z-index:9999;animation:toast-in .25s ease-out;pointer-events:none;display:none;
+}
+
+/* STEPS OF SALE PIPS */
+.sos-pip{height:5px;flex:1;border-radius:var(--rpill);cursor:pointer;transition:background .15s}
+
+/* FADE IN ANIMATION CLASS */
+.ani-in{animation:fade-up .22s ease-out both}
+
+/* INLINE ICON FIX — consistent vertical alignment */
+.mi{line-height:1;display:inline-block;vertical-align:middle}
+</style>
+
+<div id="shell"><div id="phone"></div></div>
+<div id="toast-el"></div>
+
+<script>
+/* ═══════════════════════════════════════
+   DATA
+═══════════════════════════════════════ */
+var APTS = [
+  {id:'juan', name:'Juan Gonzalez',   vehicle:'2026 Hyundai Elantra SEL', time:'12:00 pm', confirmed:true,  inShowroom:true,  step:3, src:'Internet Lead'},
+  {id:'priya',name:'Priya Sharma',    vehicle:'2026 Honda CR-V EX-L',     time:'1:30 pm',  confirmed:true,  inShowroom:false, step:0, src:'Walk-in'},
+  {id:'james',name:"James O'Connor",  vehicle:'2024 Toyota Tacoma TRD',   time:'3:15 pm',  confirmed:false, inShowroom:false, step:0, src:'Phone-in'},
+  {id:'lin',  name:'Lin Zhao',        vehicle:'2026 Tesla Model Y LR',    time:'4:45 pm',  confirmed:true,  inShowroom:false, step:0, src:'Referral'},
+];
+
+var TASKS = {
+  overdue:[
+    {id:'t1', name:'Marcus Hill',    action:'Follow-up call promised',         channel:'call',  icon:'call',     age:'45 min',  vehicle:'2025 Chevy Silverado LTZ'},
+    {id:'t2', name:'Diana Reyes',    action:'Send walk-around video',          channel:'video', icon:'videocam', age:'2 hrs',   vehicle:'2026 Toyota RAV4 XLE'},
+    {id:'t3', name:'Greg Park',      action:'Return voicemail re: trade offer',channel:'call',  icon:'call',     age:'3 hrs',   vehicle:'2024 Ford F-150 XLT'},
+  ],
+  due:[
+    {id:'t4', name:'Lin Zhao',       action:'Confirm 4:45 pm appointment',     channel:'text',  icon:'sms',      vehicle:'2026 Tesla Model Y LR'},
+    {id:'t5', name:'Priya Sharma',   action:'Send financing comparison sheet', channel:'email', icon:'mail',     vehicle:'2026 Honda CR-V EX-L'},
+  ],
+  upcoming:[
+    {id:'t6', name:"James O'Connor", action:'Call at 3:00 pm — pre-visit',     channel:'call',  icon:'call',     time:'3:00 pm', vehicle:'2024 Toyota Tacoma TRD'},
+    {id:'t7', name:'Raj Patel',      action:'Check in on deal status',         channel:'text',  icon:'sms',      time:'4:00 pm', vehicle:'2025 Honda Pilot Elite'},
+    {id:'t8', name:'Lisa Monroe',    action:'Send credit app reminder link',   channel:'email', icon:'mail',     time:'5:00 pm', vehicle:'2024 Kia EV6 Wind'},
+  ]
+};
+
+var LEADS = [
+  {name:'David Kim',    vehicle:'2026 Kia Telluride SX-P', src:'Cars.com',   age:'2m',  sla:'ok',   phone:'(813) 555-0182'},
+  {name:'Maria Vega',   vehicle:'2025 Ford Bronco Sport',  src:'AutoTrader', age:'11m', sla:'warn', phone:'(727) 555-0294'},
+  {name:'Ray Okafor',   vehicle:'2024 Tesla Model 3 LR',   src:'CarGurus',   age:'18m', sla:'err',  phone:'(813) 555-0371'},
+  {name:'Aisha Thomas', vehicle:'2026 Honda Pilot TrailSport', src:'Dealer website', age:'3m', sla:'ok', phone:'(727) 555-0449'},
+];
+
+var COMMS = [
+  {name:'Marcus Hill',   ch:'sms',      icon:'sms',      color:'var(--brand)', preview:"Can you bring up that price on the Camry one more time?", time:'4m',  unread:true,  byAiva:false},
+  {name:'Diana Reyes',   ch:'email',    icon:'mail',     color:'var(--ok)',    preview:'Re: Silverado financing — I had a few more questions…',   time:'22m', unread:true,  byAiva:true},
+  {name:'Greg Park',     ch:'voicemail',icon:'voicemail',color:'#9B5C00',      preview:'Voicemail · 0:42 — asks about trade appraisal',            time:'1h',  unread:true,  byAiva:true},
+  {name:'Raj Patel',     ch:'text',     icon:'sms',      color:'var(--brand)', preview:'Sounds good. See you Saturday morning.',                   time:'2h',  unread:false, byAiva:false},
+  {name:'Lisa Monroe',   ch:'email',    icon:'mail',     color:'var(--ok)',    preview:'Attached the insurance quote you requested.',              time:'3h',  unread:false, byAiva:false},
+];
+
+var TL = [
+  {icon:'auto_awesome',color:'var(--aiva-d)', text:'AIVA auto-logged 4 fields from Juan Gonzalez showroom session',time:'Just now',fill:true},
+  {icon:'door_front',  color:'var(--ok)',     text:'Juan Gonzalez checked in to showroom — Step 4: Test Drive',   time:'7m ago', fill:false},
+  {icon:'videocam',    color:'#7B61FF',       text:'Walk-around video sent to Priya Sharma via text',             time:'42m ago',fill:false},
+  {icon:'forum',       color:'#9B5C00',       text:'Desk chat reply from Brandon: "Approve up to $800/mo"',       time:'1h ago', fill:false},
+  {icon:'call',        color:'var(--ok)',     text:'Outbound call · Diana Reyes · 3:18 min · voicemail left',     time:'2h ago', fill:true},
+  {icon:'mail',        color:'var(--brand)',  text:'Email sent to Raj Patel: Saturday appointment confirmed',     time:'2h ago', fill:false},
+  {icon:'document_scanner',color:'#7B61FF',   text:'Smart Scan: Greg Park DL captured — customer record updated',time:'3h ago', fill:true},
+  {icon:'directions_car',  color:'var(--ok)', text:'Lisa Monroe test drive completed · Civic EX-L logged',       time:'4h ago', fill:false},
+];
+
+var TURNS = [
+  {who:'rep',text:"So you mentioned you're replacing the Elantra — what's driving the change?",t:'12:04'},
+  {who:'cst',text:"Honestly the gas mileage. And I've got a kid on the way so I want something safer.",t:'12:04'},
+  {who:'rep',text:'Got it. The Elantra Hybrid SEL averages 54 mpg and is an IIHS Top Safety Pick+.',t:'12:05'},
+  {who:'cst',text:"Yeah, that's what I'm thinking. I can stay around $420 a month, and I've got the trade.",t:'12:05'},
+];
+
+var FORM = [
+  {k:'F',label:'Family',    v:'Wife, baby on the way',     conf:.92},
+  {k:'O',label:'Occupation',v:'Operations manager · Tampa',conf:.88},
+  {k:'R',label:'Recreation',v:'Weekend road trips, beach', conf:.74},
+  {k:'M',label:'Motivation',v:'MPG + safety for child',   conf:.95},
+];
+
+var CAPTURED = [
+  {field:'Target payment',  value:'$420 / mo',         done:true},
+  {field:'Trade vehicle',   value:'2022 Elantra SEL',  done:true},
+  {field:'Test drive',      value:'Requested',         done:false},
+  {field:'Color preference',value:'Black / beige int.',done:true},
+];
+
+var STEPS = ['Needs','Vehicle','Trade-In','Test Drive','Quote','Credit','Hand-off'];
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+var S = {
+  screen:'signin',prev:'myday',tab:'myday',
+  apt:APTS[0],showroom:false,aiva:'off',
+  ctab:'overview',stab:'live',step:3,
+  scanStage:'aim',scanTimer:null,
+  dealStage:0,deskSent:false,
+  qDealType:'Finance',qDown:'2,000',qTarget:'420',qNotes:''
+};
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function mi(n,sz,col,fill){
+  sz=sz||22;fill=fill||0;col=col||'';
+  return '<span class="mi" style="font-size:'+sz+'px;'+(col?'color:'+col+';':'')+'font-variation-settings:\'FILL\' '+fill+',\'wght\' 400,\'GRAD\' 0,\'opsz\' '+sz+'">'+n+'</span>';
+}
+function av(name,sz,bg){
+  sz=sz||36;
+  var initials=(name||'').split(' ').map(function(w){return w[0]||'';}).filter(Boolean).slice(0,2).join('').toUpperCase()||'?';
+  var cols=['#196FE1','#0E8345','#B8730F','#7B61FF','#C5311E','#1F8FB7','#9B5C00','#3F51B5'];
+  var idx=name?(name.charCodeAt(0)+(name.charCodeAt(1)||0))%cols.length:0;
+  return '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+(bg||cols[idx])+';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:'+Math.round(sz*.38)+'px;letter-spacing:.3px;flex-shrink:0;min-width:'+sz+'px">'+initials+'</div>';
+}
+function chip(txt,tone){return '<span class="chip c-'+tone+'">'+txt+'</span>';}
+function vthumb(sz){
+  sz=sz||56;
+  return '<div style="width:'+sz+'px;height:'+sz+'px;min-width:'+sz+'px;border-radius:8px;background:#F4F5F8;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="'+(sz*.78)+'" height="'+(sz*.5)+'" viewBox="0 0 78 40" fill="none"><path d="M6 26L10 16Q12 12 18 11L34 9Q40 8 46 11L60 17L70 19Q74 20 74 24L74 28Q74 30 72 30L66 30A6 6 0 0 0 54 30L26 30A6 6 0 0 0 14 30L8 30Q6 30 6 28Z" fill="#A8B0BD"/><circle cx="20" cy="30" r="4" fill="#222"/><circle cx="60" cy="30" r="4" fill="#222"/><path d="M22 13L34 11L34 18L22 19Z M36 11L46 12L52 18L36 18Z" fill="#FFF" opacity=".7"/></svg></div>';
+}
+var _tt;
+function toast(msg){
+  var el=document.getElementById('toast-el');
+  if(!el)return;
+  el.textContent=msg;el.style.display='block';
+  clearTimeout(_tt);_tt=setTimeout(function(){el.style.display='none';},2500);
+}
+
+/* ═══════════════════════════════════════
+   SHARED CHROME
+═══════════════════════════════════════ */
+function aivaBanner(){
+  if(S.aiva==='off'||S.screen==='signin')return'';
+  var on=S.aiva==='listening';
+  return '<button class="aiva-banner" onclick="nav(\'session\')">'
+    +'<div class="aiva-orb '+(on?'pulse':'')+'"></div>'
+    +'<div style="flex:1"><div class="aiva-label">'+(on?'AIVA is listening':'AIVA listening passively')+'</div><div class="aiva-sub">'+(on?'Capturing conversation':'Say \u201cHey AIVA\u201d')+'</div></div>'
+    +(on?'<div class="wave"><span></span><span></span><span></span><span></span><span></span></div>':mi('chevron_right',18,'var(--aiva-ink)'))
+    +'</button>';
+}
+
+function bnav(){
+  if(['signin','scan'].indexOf(S.screen)>=0)return'';
+  var child=['customer','session','quote','desk','credit','done'].indexOf(S.screen)>=0;
+  var tabs=[{id:'myday',icon:'today',lbl:'My Day'},{id:'leads',icon:'bolt',lbl:'Leads'},{id:'cust',icon:'person',lbl:'Customers'},{id:'inv',icon:'directions_car',lbl:'Inventory'},{id:'comms',icon:'forum',lbl:'Comms'}];
+  return '<nav class="bnav">'+tabs.map(function(t){
+    return '<button class="ntab '+(S.tab===t.id&&!child?'on':'')+'" onclick="setTab(\''+t.id+'\')">'
+      +mi(t.icon,22)+'<span class="lbl">'+t.lbl+'</span>'+(t.id==='leads'?'<div class="ndot"></div>':'')+'</button>';
+  }).join('')+'</nav>';
+}
+
+function wizBar(){
+  return '<div class="wiz">'+['Quote','Credit','Hand-off','Done'].map(function(lb,i){
+    var done=S.dealStage>i,curr=S.dealStage===i;
+    return (i>0?'<div class="wline '+(done?'done':'')+'"></div>':'')
+      +'<div class="wstep" style="background:'+(done?'var(--ok)':curr?'var(--brand)':'#E0E0E0')+';color:'+(done||curr?'#fff':'var(--ink-soft)')+';">'+(done?mi('check',13,'#fff',1):(i+1))+'</div>';
+  }).join('')+'</div>';
+}
+
+/* ═══════════════════════════════════════
+   SIGN IN
+═══════════════════════════════════════ */
+function screenSignin(){
+  return '<div class="signin-wrap">'
+    +'<div style="text-align:center;margin-bottom:36px">'
+    +'<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px">'
+    +'<div style="width:48px;height:48px;border-radius:14px;background:var(--brand);display:flex;align-items:center;justify-content:center">'+mi('directions_car',28,'#fff',1)+'</div>'
+    +'<span style="font-size:28px;font-weight:700;color:#fff;letter-spacing:-.5px">MR Mobile</span></div>'
+    +'<div style="color:rgba(255,255,255,.5);font-size:13px">Sales Rep Companion &middot; Park Honda</div></div>'
+    +'<div style="width:100%;max-width:340px">'
+    +'<div style="font-size:22px;font-weight:600;color:#fff;text-align:center;margin-bottom:20px">Welcome back</div>'
+    +'<input class="si-inp" type="text" placeholder="Username" value="jamie.reyes"/>'
+    +'<input class="si-inp" type="password" placeholder="Password" value="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"/>'
+    +'<button class="si-btn" onclick="doSignIn()">Sign in</button>'
+    +'<div style="text-align:center;font-size:13px;color:rgba(255,255,255,.4);margin-top:14px;cursor:pointer">Forgot password?</div>'
+    +'<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:28px;padding:10px 20px;border-radius:var(--rpill);background:rgba(123,97,255,.15);border:1px solid rgba(123,97,255,.3)">'
+    +'<div class="aiva-orb"></div>'
+    +'<span style="font-size:12px;font-weight:500;color:rgba(255,255,255,.7)">Ava++ voice augmentation ready</span></div></div>'
+    +'<div style="margin-top:auto;padding-top:40px;font-size:11px;color:rgba(255,255,255,.2)">Demo v0.1 &middot; Confidential</div></div>';
+}
+
+/* ═══════════════════════════════════════
+   MY DAY — FULL SCREEN
+═══════════════════════════════════════ */
+function screenMyDay(){
+  var on = S.aiva !== 'off';
+  var html = '';
+
+  /* ── App bar ─── */
+  html += '<div class="abar">'
+    +'<div class="abar-inner">'
+    +'<button class="icon-btn" onclick="toast(\'Menu coming soon\')">'+mi('menu',24)+'</button>'
+    +'<div class="abar-text"><div class="abar-title">My Day</div><div class="abar-sub">Park Honda &middot; Tuesday, Apr 28</div></div>'
+    +'<button class="icon-btn" onclick="toast(\'3 unread notifications\')">'+mi('notifications',22)+'<div class="bdot"></div></button>'
+    +'<button class="icon-btn" onclick="toast(\'Universal search coming soon\')">'+mi('search',22)+'</button>'
+    +'</div></div>';
+
+  html += aivaBanner();
+
+  /* ── Scroll body starts here ─── */
+  html += '<div class="scroll-body ani-in">'
+    +'<div style="padding:14px 14px 28px 14px;display:flex;flex-direction:column;gap:12px;">';
+
+  /* ══ 1. GREETING CARD ══ */
+  html += '<div class="card" style="padding:14px 16px;">'
+    +'<div style="display:flex;align-items:center;gap:14px;">'
+    +av('Jamie Reyes',48,'#0E8345')
+    +'<div style="flex:1;min-width:0;">'
+    +'<div style="font-size:17px;font-weight:500;color:var(--ink);">Good morning, Jamie</div>'
+    +'<div style="font-size:12px;color:var(--ink-mid);margin-top:2px;">Park Honda &middot; Sales Rep</div>'
+    +'</div>'
+    +'<button onclick="toggleAiva()" style="background:'+(on?'var(--aiva-soft)':'#fff')+';border:1.5px solid '+(on?'var(--aiva-d)':'var(--divider)')+';border-radius:var(--rpill);padding:6px 12px 6px 9px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:'+(on?'var(--aiva-ink)':'var(--ink)')+';font-size:12px;font-weight:500;font-family:inherit;white-space:nowrap;">'
+    +'<div style="width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#B6A6FF,var(--aiva) 60%,var(--aiva-d));display:inline-block;flex-shrink:0;"></div>'
+    +'AIVA '+(on?'on':'off')
+    +'</button></div>'
+    /* stat row */
+    +'<div style="display:flex;gap:0;margin-top:14px;border-top:1px solid var(--div-soft);padding-top:12px;">'
+    +[['4','Appts today'],['1','In showroom'],['4','Leads'],['2','Follow-ups due']].map(function(s,i){
+      return '<div style="flex:1;text-align:center;'+(i<3?'border-right:1px solid var(--div-soft);':'')+'">'
+        +'<div style="font-size:20px;font-weight:700;color:'+(i===1?'var(--ok)':i===2?'var(--err)':i===3?'var(--warn)':'var(--ink)')+'">'+(i===1?'<span style="animation:blink 2s infinite;display:inline-block">'+s[0]+'</span>':s[0])+'</div>'
+        +'<div style="font-size:10px;color:var(--ink-soft);margin-top:1px;font-weight:500;letter-spacing:.2px;">'+s[1]+'</div></div>';
+    }).join('')
+    +'</div></div>';
+
+  /* ══ 2. IN-SHOWROOM ACTIVE BANNER ══ */
+  html += '<div style="background:#fff;border-radius:var(--r12);box-shadow:var(--s1);padding:12px 16px;display:flex;align-items:center;gap:12px;border-left:4px solid var(--ok);">'
+    +'<div style="width:36px;height:36px;border-radius:50%;background:var(--ok-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+    +mi('storefront',20,'var(--ok)',1)+'</div>'
+    +'<div style="flex:1;min-width:0;">'
+    +'<div style="display:flex;align-items:center;gap:8px;">'
+    +'<span style="width:8px;height:8px;border-radius:50%;background:var(--ok);animation:blink 1.5s infinite;flex-shrink:0;display:inline-block;"></span>'
+    +'<span style="font-size:14px;font-weight:600;color:var(--ok);">1 customer in showroom</span></div>'
+    +'<div style="font-size:12px;color:var(--ink-mid);margin-top:2px;">Juan Gonzalez &middot; Test Drive step &middot; 22 min elapsed</div></div>'
+    +'<button onclick="openCustomer(\'juan\')" style="background:var(--ok);color:#fff;border:none;border-radius:var(--rpill);padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">View</button>'
+    +'</div>';
+
+  /* ══ 3. TODAY'S APPOINTMENTS ══ */
+  html += '<div class="card">'
+    +'<div class="sec-hdr">'
+    +'<div class="sec-hdr-left"><h3>Today\'s Appointments</h3><span class="cnt">4 today</span></div>'
+    +'<button class="act sec-hdr-act" onclick="toast(\'Calendar view coming soon\')">View all</button></div>';
+  APTS.forEach(function(a,i){
+    var last=i===APTS.length-1;
+    html += '<div class="dr" style="display:flex;align-items:center;gap:12px;padding:12px 16px;'+(last?'border-bottom:none;':'')+'">'
+      +av(a.name,40)
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      +'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+a.name+'</span>'
+      +(a.inShowroom?'<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--ok);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:var(--ok);animation:blink 1.6s infinite;display:inline-block;"></span>In showroom</span>':'')
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--ink-mid);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+a.vehicle+'</div>'
+      +'<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">'+a.src+'</div></div>'
+      +'<div style="text-align:right;flex-shrink:0;">'
+      +'<div style="font-size:13px;font-weight:600;color:var(--ink);">'+a.time+'</div>'
+      +'<div style="margin-top:4px;font-size:10px;font-weight:500;color:'+(a.confirmed?'var(--ok)':'var(--warn)')+';text-transform:uppercase;letter-spacing:.3px;">'+(a.confirmed?'&#10003; confirmed':'unconfirmed')+'</div>'
+      +(a.inShowroom?'':'<button onclick="openCustomer(\''+a.id+'\')" style="margin-top:5px;background:var(--brand-soft);color:var(--brand-text);border:1px solid #C9DEFB;border-radius:var(--rpill);padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;">Check in</button>')
+      +'</div></div>';
+  });
+  html += '</div>';
+
+  /* ══ 4. FOLLOW-UP TASKS ══ */
+  html += '<div class="card">'
+    +'<div class="sec-hdr"><div class="sec-hdr-left"><h3>Follow-up Tasks</h3><span class="cnt">'+
+      (TASKS.overdue.length+TASKS.due.length+TASKS.upcoming.length)+' total</span></div>'
+    +'<button class="act" onclick="toast(\'All tasks coming soon\')">Manage</button></div>';
+
+  /* Overdue group */
+  html += '<div style="padding:6px 16px 4px;display:flex;align-items:center;gap:6px;">'
+    +'<span style="font-size:10px;font-weight:700;color:var(--err);text-transform:uppercase;letter-spacing:.6px;">Overdue</span>'
+    +'<span style="font-size:10px;font-weight:600;color:var(--err);">'+TASKS.overdue.length+'</span></div>';
+  TASKS.overdue.forEach(function(t){
+    html += '<div class="dr" style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
+      +'<div class="priority-strip" style="background:var(--err);"></div>'
+      +'<div style="width:32px;height:32px;border-radius:50%;background:var(--err-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+mi(t.icon,16,'var(--err)')+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:13px;font-weight:500;color:var(--ink);">'+t.name+'</div>'
+      +'<div style="font-size:12px;color:var(--ink-mid);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.action+'</div>'
+      +'<div style="font-size:11px;color:var(--err);margin-top:2px;font-weight:500;">'+t.age+' overdue &middot; '+t.vehicle+'</div></div>'
+      +'<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;align-items:flex-end;">'
+      +'<button onclick="toast(\'Calling '+t.name+'\')" style="background:var(--err);color:#fff;border:none;border-radius:var(--rpill);padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">'+mi(t.icon,12,'#fff',1)+' Now</button>'
+      +'</div></div>';
+  });
+
+  /* Due now group */
+  html += '<div style="padding:6px 16px 4px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--div-soft);">'
+    +'<span style="font-size:10px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.6px;">Due Now</span>'
+    +'<span style="font-size:10px;font-weight:600;color:var(--warn);">'+TASKS.due.length+'</span></div>';
+  TASKS.due.forEach(function(t){
+    html += '<div class="dr" style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
+      +'<div class="priority-strip" style="background:var(--warn);"></div>'
+      +'<div style="width:32px;height:32px;border-radius:50%;background:var(--warn-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+mi(t.icon,16,'var(--warn)')+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:13px;font-weight:500;color:var(--ink);">'+t.name+'</div>'
+      +'<div style="font-size:12px;color:var(--ink-mid);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.action+'</div>'
+      +'<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">'+t.vehicle+'</div></div>'
+      +'<button onclick="toast(\'Opening action for '+t.name+'\')" style="background:var(--warn-soft);color:var(--warn);border:1.5px solid var(--warn-border);border-radius:var(--rpill);padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">Do it</button>'
+      +'</div>';
+  });
+
+  /* Upcoming group */
+  html += '<div style="padding:6px 16px 4px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--div-soft);">'
+    +'<span style="font-size:10px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.6px;">Upcoming</span>'
+    +'<span style="font-size:10px;font-weight:600;color:var(--ink-soft);">'+TASKS.upcoming.length+'</span></div>';
+  TASKS.upcoming.forEach(function(t,i){
+    var last=i===TASKS.upcoming.length-1;
+    html += '<div class="dr" style="display:flex;align-items:center;gap:10px;padding:10px 16px;'+(last?'border-bottom:none;':'')+'">'
+      +'<div class="priority-strip" style="background:var(--div-soft);"></div>'
+      +'<div style="width:32px;height:32px;border-radius:50%;background:#F0F0F2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+mi(t.icon,16,'var(--ink-soft)')+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:13px;font-weight:500;color:var(--ink);">'+t.name+'</div>'
+      +'<div style="font-size:12px;color:var(--ink-mid);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+t.action+'</div>'
+      +'<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">'+t.time+' &middot; '+t.vehicle+'</div></div>'
+      +'<div style="font-size:12px;color:var(--ink-soft);flex-shrink:0;">'+t.time+'</div></div>';
+  });
+  html += '</div>';
+
+  /* ══ 5. INTERNET LEADS ══ */
+  var slaColor={ok:'var(--ok)',warn:'var(--warn)',err:'var(--err)'};
+  var slaBg   ={ok:'var(--ok-soft)',warn:'var(--warn-soft)',err:'var(--err-soft)'};
+  var slaLabel={ok:'On time',warn:'Approaching',err:'Breach'};
+
+  html += '<div class="card">'
+    +'<div class="sec-hdr"><div class="sec-hdr-left"><h3>Internet Leads</h3><span class="cnt">4 assigned</span></div>'
+    +'<button class="act" onclick="setTab(\'leads\')">View all</button></div>';
+  LEADS.forEach(function(l,i){
+    var last=i===LEADS.length-1;
+    html += '<div class="dr" style="padding:12px 16px;display:flex;gap:12px;align-items:flex-start;'+(last?'border-bottom:none;':'')+'">'
+      +av(l.name,38)
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+l.name+'</div>'
+      +'<div style="font-size:12px;color:var(--ink-mid);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+l.vehicle+'</div>'
+      +'<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">'+l.src+' &middot; '+l.phone+'</div>'
+      +'<div style="display:flex;gap:6px;margin-top:8px;">'
+      +'<button onclick="toast(\'Calling '+l.name+'\')" class="btn b-p b-sm" style="border-radius:var(--rpill);font-size:11px;padding:5px 10px;">'+mi('call',13,'',1)+' Call</button>'
+      +'<button onclick="toast(\'Text to '+l.name+'\')" class="btn b-s b-sm" style="border-radius:var(--rpill);font-size:11px;padding:5px 10px;">'+mi('sms',13,'var(--brand)',1)+' Text</button>'
+      +'<button onclick="toast(\'Email to '+l.name+'\')" class="btn b-sm" style="border-radius:var(--rpill);font-size:11px;padding:5px 10px;background:transparent;color:var(--ink-soft);border:1px solid var(--divider);">'+mi('mail',13,'var(--ink-soft)',1)+' Email</button>'
+      +'</div></div>'
+      +'<div style="flex-shrink:0;text-align:right;">'
+      +'<span class="sla-badge" style="background:'+slaBg[l.sla]+';color:'+slaColor[l.sla]+';border-color:'+slaColor[l.sla]+';animation:'+(l.sla==='err'?'sla-tick 1.2s ease-in-out infinite':'none')+';">'
+      +mi('timer',11,slaColor[l.sla])+' '+l.age+'</span>'
+      +'<div style="font-size:10px;color:'+slaColor[l.sla]+';margin-top:4px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;">'+slaLabel[l.sla]+'</div>'
+      +'</div></div>';
+  });
+  html += '</div>';
+
+  /* ══ 6. COMMUNICATIONS ══ */
+  html += '<div class="card">'
+    +'<div class="sec-hdr"><div class="sec-hdr-left"><h3>Communications</h3>'
+    +'<span class="cnt">3 unread</span></div>'
+    +'<button class="act" onclick="toast(\'All comms coming soon\')">View all</button></div>';
+  COMMS.forEach(function(c,i){
+    var last=i===COMMS.length-1;
+    html += '<div class="dr" style="display:flex;align-items:center;gap:12px;padding:11px 16px;'+(last?'border-bottom:none;':'')+'">'
+      +'<div style="width:36px;height:36px;border-radius:50%;background:#F0F0F2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+mi(c.icon,18,c.color)+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:13px;font-weight:'+(c.unread?600:400)+';display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+      +c.name
+      +(c.byAiva?' '+chip(mi('auto_awesome',9,'var(--aiva-ink)',1)+' AIVA','ai'):'')
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--ink-mid);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c.preview+'</div></div>'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'
+      +'<span style="font-size:11px;color:var(--ink-soft);">'+c.time+'</span>'
+      +(c.unread?'<span style="width:8px;height:8px;border-radius:50%;background:var(--brand);display:block;"></span>':'')
+      +'</div></div>';
+  });
+  html += '</div>';
+
+  /* ══ 7. ACTIVITY RECAP ══ */
+  html += '<div class="card">'
+    +'<div class="sec-hdr"><div class="sec-hdr-left"><h3>Activity Recap</h3><span class="cnt">Today</span></div>'
+    +'<button class="act" onclick="toast(\'Full AIVA timeline coming soon\')">AIVA timeline</button></div>';
+  TL.forEach(function(r,i){
+    var last=i===TL.length-1;
+    html += '<div class="tl-row" style="'+(last?'border-bottom:none;':'')+'">'
+      +'<div class="tl-dot">'+mi(r.icon,14,r.color,r.fill?1:0)+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:13px;color:var(--ink);line-height:1.4;">'+r.text+'</div>'
+      +'<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">'+r.time+'</div></div></div>';
+  });
+  html += '</div>';
+
+  /* ══ 8. SMART SCAN + VIDEO + QUICK ACTIONS ══ */
+  html += '<div class="card" style="overflow:visible;">'
+    +'<div class="sec-hdr"><h3>Quick Actions</h3></div>'
+    +'<div style="display:flex;flex-direction:column;gap:0;">';
+
+  var quickActions = [
+    {icon:'document_scanner',color:'var(--brand)',bg:'var(--brand-soft)',label:'Smart Scan',sub:'VIN, license, or insurance card — one tap',action:"openScan()"},
+    {icon:'videocam',color:'#7B61FF',bg:'#EFEAFF',label:'Record Walk-Around Video',sub:'Send personalized video to a lead or customer',action:"toast('Video recording coming soon')"},
+    {icon:'how_to_reg',color:'var(--ok)',bg:'var(--ok-soft)',label:'Check In a Walk-In',sub:'Start a showroom session and notify your manager',action:"toast('Walk-in check-in coming soon')"},
+    {icon:'person_add',color:'#1F8FB7',bg:'#E0F4FB',label:'Create New Customer',sub:'Smart Scan DL to autofill name, DOB, and address',action:"toast('New customer flow coming soon')"},
+    {icon:'forum',color:'#9B5C00',bg:'var(--warn-soft)',label:'Message Sales Manager',sub:'Send a desk chat or escalate a deal',action:"toast('Desk chat coming soon')"},
+  ];
+  quickActions.forEach(function(q,i){
+    var last=i===quickActions.length-1;
+    html += '<button onclick="'+q.action+'" class="dr" style="display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;background:none;border:none;cursor:pointer;text-align:left;'+(last?'border-bottom:none;':'')+'">'
+      +'<div style="width:40px;height:40px;border-radius:var(--r8);background:'+q.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+mi(q.icon,22,q.color)+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:14px;font-weight:500;color:var(--ink);">'+q.label+'</div>'
+      +'<div style="font-size:12px;color:var(--ink-mid);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+q.sub+'</div></div>'
+      +mi('chevron_right',18,'var(--ink-faint)')+'</button>';
+  });
+  html += '</div></div>';
+
+  /* ══ 9. PERFORMANCE SNAPSHOT ══ */
+  html += '<div class="card" style="padding:14px 16px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+    +'<h3 style="font-size:15px;font-weight:600;">My Performance</h3>'
+    +chip('April MTD','n')+'</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:12px;">'
+    +[['12','Units sold','var(--ok)'],['8.4','Avg days','"#000"'],['68%','Appt rate','var(--brand)'],['4.2m','Resp. time','var(--aiva-d)']].map(function(s){
+      return '<div style="flex:1;background:var(--bg-alt);border-radius:var(--r8);padding:10px 8px;text-align:center;">'
+        +'<div style="font-size:18px;font-weight:700;color:'+s[2]+';">'+s[0]+'</div>'
+        +'<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;font-weight:500;letter-spacing:.1px;">'+s[1]+'</div></div>';
+    }).join('')+'</div>'
+    +'<div style="background:var(--aiva-soft);border:1px solid var(--aiva-border);border-radius:var(--r8);padding:10px 12px;display:flex;align-items:center;gap:8px;">'
+    +'<div class="aiva-orb '+(on?'pulse':'')+'"></div>'
+    +'<div style="font-size:12px;color:var(--aiva-ink);line-height:1.4;flex:1;"><b>AIVA insight:</b> Your response time improved 38% this week. Priya Sharma engagement is high &mdash; good follow-up candidate today.</div></div>'
+    +'</div>';
+
+  /* ══ 10. APPOINTMENT PIPELINE ══ */
+  html += '<div class="card" style="padding:14px 16px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+    +'<h3 style="font-size:15px;font-weight:600;">Pipeline</h3>'
+    +chip('This week','n')+'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;">'
+    +[
+      {step:'Needs assessment',count:3,color:'#A8B0BD'},
+      {step:'Vehicle selected',count:2,color:'var(--brand)'},
+      {step:'Trade submitted',count:2,color:'var(--brand)'},
+      {step:'Test drive done',count:1,color:'#7B61FF'},
+      {step:'Quote sent',count:1,color:'#7B61FF'},
+      {step:'Credit submitted',count:1,color:'var(--ok)'},
+      {step:'Closed / sold',count:2,color:'var(--ok)'},
+    ].map(function(p,i){
+      var pct=Math.round((p.count/3)*100);
+      return '<div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+        +'<span style="font-size:12px;color:var(--ink-mid);">'+p.step+'</span>'
+        +'<span style="font-size:12px;font-weight:600;color:var(--ink);">'+p.count+'</span></div>'
+        +'<div style="height:5px;background:var(--div-soft);border-radius:3px;">'
+        +'<div style="height:5px;border-radius:3px;background:'+p.color+';width:'+Math.min(100,p.count*33)+'%;transition:width .4s;"></div></div></div>';
+    }).join('')
+    +'</div></div>';
+
+  html += '</div></div>'; /* end padding div + scroll-body */
+  return html;
+}
+
+/* ═══════════════════════════════════════
+   OTHER SCREENS (unchanged, abbreviated)
+═══════════════════════════════════════ */
+function screenLeads(){
+  var slaColor={ok:'var(--ok)',warn:'var(--warn)',err:'var(--err)'};
+  var slaBg   ={ok:'var(--ok-soft)',warn:'var(--warn-soft)',err:'var(--err-soft)'};
+  var html='<div class="abar"><div class="abar-inner"><button class="icon-btn" onclick="toast(\'Menu\')">'+mi('menu',24)+'</button><div class="abar-text"><div class="abar-title">Leads</div><div class="abar-sub">Stop-the-clock &middot; SLA active</div></div><button class="icon-btn" onclick="toast(\'Filters\')">'+mi('filter_list',22)+'</button></div></div>'+aivaBanner()+'<div class="scroll-body ani-in"><div style="padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:24px;">';
+  LEADS.forEach(function(l){
+    html+='<div class="card" style="padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">'+av(l.name,44)+'<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;">'+l.name+'</div><div style="font-size:12px;color:var(--ink-mid);margin-top:2px;">'+l.vehicle+'</div><div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">'+l.src+' &middot; '+l.age+' ago</div><div style="display:flex;gap:6px;margin-top:10px;"><button class="btn b-p b-sm" onclick="toast(\'Calling '+l.name+'\')" style="border-radius:var(--rpill);">'+mi('call',13,'',1)+' Call</button><button class="btn b-s b-sm" onclick="toast(\'Text for '+l.name+'\')" style="border-radius:var(--rpill);">'+mi('sms',13,'var(--brand)',1)+' Text</button></div></div><div style="text-align:right;flex-shrink:0;"><span class="sla-badge" style="background:'+slaBg[l.sla]+';color:'+slaColor[l.sla]+';border-color:'+slaColor[l.sla]+';">'+mi('timer',11,slaColor[l.sla])+' '+l.age+'</span></div></div>';
+  });
+  html+='</div></div>';return html;
+}
+
+function screenSearch(){
+  return '<div class="abar"><div class="abar-inner"><button class="icon-btn" onclick="toast(\'Menu\')">'+mi('menu',24)+'</button><div class="abar-text"><div class="abar-title">Customers</div></div></div></div>'
+    +aivaBanner()
+    +'<div class="scroll-body ani-in" style="background:#fff;">'
+    +'<div style="padding:12px 16px;border-bottom:1px solid var(--div-soft);"><div style="display:flex;align-items:center;gap:8px;background:var(--bg-alt);border-radius:var(--rpill);padding:10px 16px;">'+mi('search',18,'var(--ink-soft)')+'<span style="color:var(--ink-soft);font-size:14px;">Search by name, phone, email&hellip;</span></div></div>'
+    +'<div style="padding:10px 16px 6px;font-size:11px;font-weight:600;color:var(--ink-soft);letter-spacing:.5px;text-transform:uppercase;">Recently actioned</div>'
+    +APTS.map(function(a){return '<button onclick="openCustomer(\''+a.id+'\')" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;background:none;border:none;cursor:pointer;text-align:left;border-bottom:1px solid var(--div-soft);">'+av(a.name,40)+'<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;">'+a.name+'</div><div style="font-size:12px;color:var(--ink-mid);">'+a.vehicle+'</div></div>'+mi('chevron_right',20,'var(--ink-soft)')+'</button>';}).join('')
+    +'</div>';
+}
+
+function screenCustomer(){
+  var a=S.apt,sr=S.showroom;
+  var tabNames=[['overview','Overview'],['deal','Deal'],['activity','Activity'],['notes','Notes']];
+  return '<div class="cbar"><button class="icon-btn" onclick="goBack()">'+mi('arrow_back',24)+'</button><div class="cbar-text"><div class="cbar-title">'+a.name+'</div><div class="cbar-sub">Customer &middot; '+a.vehicle+'</div></div><button class="icon-btn" onclick="toast(\'Starred\')">'+mi('star_outline',22)+'</button><button class="icon-btn" onclick="toast(\'Options\')">'+mi('more_vert',22)+'</button></div>'
+    +'<div style="flex-shrink:0;background:#fff;border-bottom:1px solid var(--div-soft);padding:10px 16px 14px;display:flex;align-items:center;gap:12px;"><button class="tog" style="background:'+(sr?'var(--brand)':'#D6D6D6')+';" onclick="toggleShowroom()"><div class="tog-t" style="left:'+(sr?22:2)+'px;"></div></button><span style="font-size:15px;">Customer in showroom</span>'+(sr?'<span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--ok);text-transform:uppercase;letter-spacing:.4px;"><span style="width:6px;height:6px;border-radius:50%;background:var(--ok);animation:blink 1.6s infinite;display:inline-block;"></span>Active</span>':'')+'</div>'
+    +'<div style="flex-shrink:0;display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid var(--div-soft);background:#fff;">'
+    +['call:Call','sms:Text','mail:Email'].map(function(s){var p=s.split(':');return '<button onclick="toast(\''+p[1]+'\')" style="flex:1;background:var(--brand);color:#fff;border:none;border-radius:var(--r8);padding:10px 8px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;">'+mi(p[0],17,'',1)+' '+p[1]+'</button>';}).join('')
+    +'</div>'+aivaBanner()
+    +'<div class="seg">'+tabNames.map(function(t){return '<button class="stab '+(S.ctab===t[0]?'on':'')+'" onclick="setCTab(\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+'</div>'
+    +'<div class="scroll-body ani-in">'+(S.ctab==='overview'?custOverview(a,sr):S.ctab==='deal'?custDeal():S.ctab==='activity'?custActivity():custNotes())+'</div>';
+}
+
+function custOverview(a,sr){
+  return '<div style="padding:14px;display:flex;flex-direction:column;gap:14px;padding-bottom:24px;">'
+    +'<div style="background:linear-gradient(135deg,var(--aiva-soft) 0%,#F8F4FF 100%);border:1px solid var(--aiva-border);border-radius:var(--r12);padding:14px;display:flex;flex-direction:column;gap:10px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#B6A6FF,var(--aiva) 60%,var(--aiva-d));'+(sr?'animation:orb-pulse 1.8s ease-out infinite':'')+'"></div><div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--aiva-ink);letter-spacing:.4px;text-transform:uppercase;">AIVA Summary '+(sr?'&middot; live':'')+'</div><div style="font-size:10px;color:var(--ink-soft);">Updated 2m ago &middot; session 2026-04-28-0941</div></div><button onclick="nav(\'session\')" style="background:var(--aiva-d);color:#fff;border:none;border-radius:var(--rpill);padding:7px 12px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;">'+mi('graphic_eq',14,'',1)+' '+(sr?'View live':'Start session')+'</button></div>'
+    +'<p style="margin:0;font-size:13px;line-height:1.5;">Hot lead on the <b>Elantra SEL</b>. Has a <b>2022 Elantra trade</b>, target <b>$420/mo</b>, finance preferred. Push back on $475 noted.</p>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'+chip(mi('local_fire_department',9,'',1)+' Hot','ai')+' '+chip(mi('directions_car',9,'',1)+' Test drive due','ok')+' '+chip(mi('payments',9,'',1)+' Trade pending','w')+' '+chip(mi('schedule',9,'',1)+' Step '+(S.step+1)+' of 7','b')+'</div></div>'
+    +'<div class="card" style="padding:14px;"><div style="font-size:14px;font-weight:500;margin-bottom:10px;">Steps of sale</div><div style="display:flex;gap:4px;">'+STEPS.map(function(st,i){return '<div class="sos-pip" title="'+st+'" style="background:'+(i<S.step?'var(--brand)':i===S.step?'rgba(25,111,225,.25)':'var(--div-soft)')+'"></div>';}).join('')+'</div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink-soft);margin-top:5px;padding:0 2px;"><span>Needs</span><span style="color:var(--brand);font-weight:700;">'+STEPS[S.step]+'</span><span>Hand-off</span></div><button onclick="nav(\'session\')" class="btn b-p b-sm" style="margin-top:12px;border-radius:var(--rpill);">'+mi('graphic_eq',13,'',1)+' Open AIVA Session</button></div>'
+    +'<div class="card" style="padding:14px;"><div style="font-size:14px;font-weight:500;margin-bottom:12px;">Contact info</div><div style="margin-bottom:10px;"><div class="lbl" style="margin-bottom:2px;">Cell</div><div style="font-size:14px;">(555) 123-4567</div></div><div style="margin-bottom:10px;"><div class="lbl" style="margin-bottom:2px;">Email</div><div style="font-size:14px;">juan.gonzalez@email.com</div></div><div><div class="lbl" style="margin-bottom:2px;">Address</div><div style="font-size:14px;">123 Main St, Tampa, FL 33601</div></div></div>'
+    +'<div class="card" style="padding:14px;"><div style="font-size:14px;font-weight:500;margin-bottom:10px;">Vehicle of interest</div><div style="display:flex;align-items:center;gap:12px;border:1px solid var(--divider);border-radius:var(--r12);padding:10px;">'+vthumb(52)+'<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;">2026 Hyundai Elantra SEL</div><div style="font-size:14px;margin-top:2px;">$23,575</div><div style="font-size:11px;color:var(--ink-mid);margin-top:2px;">#H9637 &middot; KMHLM4DG7RU844036</div></div>'+chip('Available','ok')+'</div></div>'
+    +'<div class="card" style="padding:14px;"><div style="font-size:14px;font-weight:500;margin-bottom:10px;">Trade-in</div><div style="display:flex;align-items:center;gap:12px;border:1px solid var(--divider);border-radius:var(--r12);padding:10px;">'+vthumb(52)+'<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;">2022 Hyundai Elantra SEL</div><div style="font-size:12px;color:var(--ink-mid);margin-top:2px;">23,479 mi</div></div><div style="text-align:right;flex-shrink:0;"><div style="font-size:11px;color:var(--ink-soft);">Est. offer</div><div style="font-size:15px;font-weight:600;color:var(--ok);">$4,573</div></div></div></div>'
+    +'</div>';
+}
+
+function custDeal(){
+  return '<div style="padding:14px;display:flex;flex-direction:column;gap:14px;padding-bottom:24px;">'
+    +'<div class="card" style="padding:16px;"><div style="font-size:16px;font-weight:500;margin-bottom:14px;">Quick Quote</div>'
+    +[['Vehicle','2026 Elantra SEL',''],['Deal type','Finance',''],['Down payment','$2,000',''],['Target payment','$420 / mo',chip(mi('auto_awesome',9,'var(--aiva-ink)',1)+' AIVA','ai')],['Trade equity','+$4,573','']].map(function(r){return '<div style="padding:10px 0;border-bottom:1px solid var(--div-soft);display:flex;align-items:center;justify-content:space-between;"><div style="font-size:13px;color:var(--ink-mid);">'+r[0]+'</div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14px;font-weight:500;">'+r[1]+'</span>'+r[2]+'</div></div>';}).join('')
+    +'<div style="padding:10px 0;font-size:12px;color:var(--ink-soft);font-style:italic;">Customer pushed back on $475 &mdash; wants closer to $400/mo.</div>'
+    +'<button onclick="nav(\'quote\')" class="btn b-p b-full b-md" style="margin-top:12px;">'+mi('send',16,'',1)+' Build Quote &amp; Send to Desk</button></div>'
+    +'<div style="padding:12px 14px;border-radius:var(--r12);background:var(--aiva-soft);border:1px solid var(--aiva-border);display:flex;gap:10px;align-items:flex-start;">'+mi('auto_awesome',16,'var(--aiva-d)',1)+'<div style="font-size:12px;color:var(--aiva-ink);line-height:1.5;"><b>Ava++ auto-drafts desk summary</b> from session transcript.</div></div></div>';
+}
+
+function custActivity(){
+  return '<div style="padding-bottom:24px;"><div style="padding:12px 16px;display:flex;gap:8px;">'+chip('Milestones','b')+' '+chip('All Activity','n')+'</div>'
+    +TL.map(function(r,i){return '<div class="tl-row" style="'+(i===TL.length-1?'border-bottom:none;':'')+'">'+'<div class="tl-dot">'+mi(r.icon,14,r.color,r.fill?1:0)+'</div><div style="flex:1;min-width:0;"><div style="font-size:13px;line-height:1.4;">'+r.text+'</div><div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">'+r.time+'</div></div></div>';}).join('')
+    +'</div>';
+}
+
+function custNotes(){
+  return '<div style="padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:24px;">'
+    +'<div style="padding:10px;background:var(--aiva-soft);border:1px solid var(--aiva-border);border-radius:var(--r8);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--aiva-ink);">'+mi('auto_awesome',14,'var(--aiva-d)',1)+' AIVA appends session notes here &mdash; your notes stay intact.</div>'
+    +'<div class="card" style="padding:12px;min-height:160px;"><div style="font-size:13px;line-height:1.6;">Customer mentioned baby on the way, wants something safe. Elantra Hybrid SEL resonated.<br><br><span style="color:var(--aiva-ink);">[AIVA &middot; 0941] Auto-captured: $420/mo target, trade confirmed, test drive requested, black ext / beige int.</span></div></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--divider);border-radius:var(--r12);padding:12px;">'+mi('mic',20,'var(--brand)',1)+'<span style="font-size:14px;color:var(--ink-soft);">Tap mic to dictate a note&hellip;</span></div></div>';
+}
+
+function screenSession(){
+  var on=S.aiva==='listening';
+  return '<div class="cbar"><button class="icon-btn" onclick="goBack()">'+mi('arrow_back',24)+'</button><div class="cbar-text"><div class="cbar-title">AIVA Session</div><div class="cbar-sub">'+S.apt.name+' &middot; live</div></div><button class="icon-btn" onclick="toast(\'History\')">'+mi('history',22)+'</button><button class="icon-btn" onclick="toast(\'Options\')">'+mi('more_vert',22)+'</button></div>'
+    +'<div style="padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--div-soft);background:#fff;flex-shrink:0;">'+av(S.apt.name,32)+'<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:500;">'+S.apt.name+'</div><div style="font-size:11px;color:var(--ink-mid);">Step '+(S.step+1)+' &middot; '+STEPS[S.step]+' &middot; session 09:41</div></div>'+chip(mi('auto_awesome',9,'var(--aiva-ink)',1)+' Ava++','ai')+'</div>'
+    +'<div class="seg">'+[['live','Conversation'],['notes','F.O.R.M. Notes'],['actions','Auto-fill']].map(function(t){return '<button class="stab '+(S.stab===t[0]?'on':'')+'" onclick="setSTab(\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+'</div>'
+    +'<div class="scroll-body ani-in" style="background:#FAFAFA;">'+(S.stab==='live'?sessLive(on):S.stab==='notes'?sessNotes():sessActions())+'</div>'
+    +'<div style="flex-shrink:0;background:#fff;border-top:1px solid var(--div-soft);padding:12px 16px;display:flex;align-items:center;gap:12px;">'
+    +'<button onclick="toggleMic()" style="width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:'+(on?'radial-gradient(circle at 30% 30%,#B6A6FF,var(--aiva) 60%,var(--aiva-d))':'#F0F0F2')+';color:'+(on?'#fff':'var(--ink-mid)')+';animation:'+(on?'mic-pulse 1.6s ease-out infinite':'none')+';">'+mi(on?'mic':'mic_off',24,'',1)+'</button>'
+    +'<div style="flex:1;"><div style="font-size:13px;font-weight:500;">'+(on?'Listening &middot; capturing':'Paused')+'</div><div style="font-size:11px;color:var(--ink-mid);">'+(on?'Say \u201cHey AIVA\u201d for a command':'Tap mic to resume')+'</div></div>'
+    +'<button class="btn b-p b-sm" onclick="openScan()" style="border-radius:var(--rpill);">'+mi('document_scanner',15,'',1)+' Smart Scan</button></div>';
+}
+
+function sessLive(on){
+  var html='<div style="padding:16px;display:flex;flex-direction:column;gap:10px;padding-bottom:20px;">';
+  TURNS.forEach(function(t,i){
+    var r=t.who==='rep';
+    html+='<div style="display:flex;flex-direction:'+(r?'row':'row-reverse')+';gap:8px;">'
+      +'<div style="max-width:80%;padding:8px 12px;border-radius:var(--r12);background:'+(r?'#fff':'var(--brand)')+';color:'+(r?'var(--ink)':'#fff')+';border:'+(r?'1px solid var(--div-soft)':'none')+';font-size:13px;line-height:1.45;">'
+      +'<div style="font-size:10px;font-weight:600;letter-spacing:.4px;color:'+(r?'var(--ink-soft)':'rgba(255,255,255,.75)')+';text-transform:uppercase;margin-bottom:2px;">'+(r?'You':'Juan')+' &middot; '+t.t+'</div>'+t.text+'</div></div>';
+  });
+  html+='<div style="padding:10px 12px;border-radius:var(--r12);background:var(--aiva-soft);border:1px solid var(--aiva-border);display:flex;gap:10px;align-items:flex-start;">'+mi('auto_awesome',16,'var(--aiva-d)',1)+'<div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--aiva-ink);letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px;">AIVA insight</div><div style="font-size:13px;line-height:1.4;">Baby on the way + $420 target. Suggest <b>Elantra Hybrid SEL</b> &mdash; 54 mpg, IIHS Top Safety Pick+. '+chip('97% match','ai')+'</div><div style="display:flex;gap:6px;margin-top:8px;"><button class="btn b-ai b-sm" onclick="toast(\'Opening Elantra Hybrid in inventory\')">Show me</button><button class="btn b-sm" style="background:transparent;color:var(--aiva-ink);border:1px solid var(--aiva-border);" onclick="toast(\'Dismissed\')">Dismiss</button></div></div></div>';
+  if(on)html+='<div style="display:flex;gap:6px;align-items:center;padding:4px 12px;"><div style="display:flex;gap:3px;align-items:flex-end;height:16px;">'+[8,12,18,10,14].map(function(h,i){return '<span style="width:3px;height:'+h+'px;background:var(--aiva-d);border-radius:1px;animation:bar .9s ease-in-out '+(i*.1)+'s infinite;display:block;"></span>';}).join('')+'</div><span style="font-size:11px;color:var(--aiva-ink);font-style:italic;">Juan is speaking&hellip;</span></div>';
+  html+='<button onclick="setSTab(\'actions\')" class="btn b-p b-full b-md" style="margin-top:8px;">'+mi('fact_check',16,'',1)+' Review auto-filled fields</button>';
+  return html+'</div>';
+}
+
+function sessNotes(){
+  var html='<div style="padding:16px;display:flex;flex-direction:column;gap:10px;padding-bottom:24px;"><div style="padding:10px;background:var(--aiva-soft);border:1px solid var(--aiva-border);border-radius:var(--r8);font-size:12px;color:var(--aiva-ink);display:flex;align-items:center;gap:8px;">'+mi('auto_awesome',14,'var(--aiva-d)',1)+' AIVA assembled F.O.R.M. notes from passive capture.</div>';
+  FORM.forEach(function(n){
+    html+='<div style="background:#fff;border:1px solid var(--div-soft);border-radius:var(--r12);padding:12px;display:flex;gap:12px;align-items:flex-start;"><div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">'+n.k+'</div><div style="flex:1;min-width:0;"><div style="font-size:12px;color:var(--ink-mid);margin-bottom:2px;">'+n.label+'</div><div style="font-size:14px;font-weight:500;">'+n.v+'</div><div class="conf-w"><div class="conf-f" style="width:'+Math.round(n.conf*100)+'%;"></div></div><div style="font-size:10px;color:var(--ink-soft);margin-top:2px;">'+Math.round(n.conf*100)+'% confidence</div></div><button onclick="toast(\'Editing '+n.label+'\')" style="background:none;border:none;cursor:pointer;padding:4px;">'+mi('edit',17,'var(--brand)')+'</button></div>';
+  });
+  return html+'</div>';
+}
+
+function sessActions(){
+  var html='<div style="padding:16px;display:flex;flex-direction:column;gap:10px;padding-bottom:24px;"><div style="font-size:13px;color:var(--ink-mid);margin-bottom:2px;">Auto-filled from conversation. Confirm before sending.</div>';
+  CAPTURED.forEach(function(c){
+    html+='<div style="background:#fff;border:1px solid '+(c.done?'var(--div-soft)':'var(--aiva-border)')+';border-radius:var(--r12);padding:12px;display:flex;align-items:center;gap:12px;"><div style="width:28px;height:28px;min-width:28px;border-radius:50%;background:'+(c.done?'var(--ok-soft)':'var(--aiva-soft)')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+mi(c.done?'check_circle':'pending',16,c.done?'var(--ok)':'var(--aiva)',1)+'</div><div style="flex:1;min-width:0;"><div style="font-size:12px;color:var(--ink-mid);">'+c.field+'</div><div style="font-size:14px;font-weight:500;margin-top:1px;">'+c.value+'</div></div>'+(!c.done?'<button class="btn b-ai b-sm" onclick="toast(\''+c.field+' confirmed\')">Confirm</button>':chip('Confirmed','ok'))+'</div>';
+  });
+  html+='<button onclick="nav(\'quote\')" class="btn b-p b-full b-md" style="margin-top:8px;">'+mi('send',16,'',1)+' Build Quote &amp; Send to Desk</button>';
+  return html+'</div>';
+}
+
+function screenQuote(){
+  var dt=S.qDealType;
+  return '<div class="cbar"><button class="icon-btn" onclick="goBack()">'+mi('arrow_back',24)+'</button><div class="cbar-text"><div class="cbar-title">Quick Quote</div><div class="cbar-sub">'+S.apt.name+'</div></div></div>'
+    +wizBar()+aivaBanner()
+    +'<div class="scroll-body ani-in"><div style="padding:14px;display:flex;flex-direction:column;gap:14px;padding-bottom:28px;">'
+    +'<div class="card" style="padding:12px 14px;display:flex;align-items:center;gap:12px;">'+vthumb(50)+'<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;">'+S.apt.vehicle+'</div><div style="font-size:12px;color:var(--ink-mid);">$23,575 &middot; Stock #H9637</div></div>'+chip('Available','ok')+'</div>'
+    +'<div class="card" style="padding:16px;"><div style="font-size:15px;font-weight:600;margin-bottom:14px;">Deal details</div>'
+    +'<div style="margin-bottom:14px;"><label class="lbl">Deal type</label><div style="display:flex;gap:8px;">'+['Finance','Lease','Cash'].map(function(t){return '<button onclick="S.qDealType=\''+t+'\';re()" style="flex:1;padding:10px 4px;border:1.5px solid '+(dt===t?'var(--brand)':'var(--divider)')+';border-radius:var(--r8);background:'+(dt===t?'var(--brand-soft)':'#fff')+';color:'+(dt===t?'var(--brand-text)':'var(--ink-mid)')+';font-size:13px;font-weight:'+(dt===t?600:400)+';cursor:pointer;font-family:inherit;">'+t+'</button>';}).join('')+'</div></div>'
+    +'<div style="margin-bottom:14px;"><label class="lbl">Down payment</label><div style="position:relative;"><span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--ink-mid);">$</span><input class="inp" type="text" value="'+S.qDown+'" style="padding-left:26px;" oninput="S.qDown=this.value"/></div></div>'
+    +'<div style="margin-bottom:14px;"><label class="lbl">Target monthly payment '+chip(mi('auto_awesome',9,'var(--aiva-ink)',1)+' AIVA','ai')+'</label><div style="position:relative;"><span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--ink-mid);">$</span><input class="inp" type="text" value="'+S.qTarget+'" style="padding-left:26px;" oninput="S.qTarget=this.value"/></div></div>'
+    +'<div style="margin-bottom:14px;"><label class="lbl">Trade-in</label><div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--divider);border-radius:var(--r8);background:#F8F8F8;">'+mi('directions_car',17,'var(--ok)')+'<span style="font-size:14px;">2022 Elantra SEL &middot; +$4,573</span></div></div>'
+    +'<div><label class="lbl">Context for manager</label><textarea class="inp" rows="3" style="resize:none;font-size:14px;line-height:1.5;" oninput="S.qNotes=this.value" placeholder="Customer pushed back on $475, wants closer to $400/mo&hellip;">'+S.qNotes+'</textarea></div></div>'
+    +'<div style="padding:12px 14px;border-radius:var(--r12);background:var(--aiva-soft);border:1px solid var(--aiva-border);display:flex;gap:10px;align-items:flex-start;">'+mi('auto_awesome',16,'var(--aiva-d)',1)+'<div style="font-size:12px;color:var(--aiva-ink);line-height:1.5;"><b>Ava++ auto-drafts desk summary</b> from session transcript. You review before sending.</div></div>'
+    +'<button onclick="nav(\'desk\')" class="btn b-p b-full b-lg">'+mi('send',18,'',1)+' Preview &amp; Send to Desk</button>'
+    +'</div></div>';
+}
+
+function screenDesk(){
+  return '<div class="cbar"><button class="icon-btn" onclick="goBack()">'+mi('arrow_back',24)+'</button><div class="cbar-text"><div class="cbar-title">Desk Chat</div><div class="cbar-sub">'+S.apt.name+' &middot; Mgr: Brandon Goss</div></div></div>'
+    +wizBar()
+    +'<div class="scroll-body ani-in"><div style="padding:14px;display:flex;flex-direction:column;gap:14px;padding-bottom:28px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#F8F8F8;border-radius:var(--r12);border:1px solid var(--div-soft);">'+av('Brandon Goss',36,'#9B5C00')+'<div><div style="font-size:14px;font-weight:500;">Brandon Goss</div><div style="font-size:12px;color:var(--ink-mid);">Sales Manager &middot; available</div></div><span style="margin-left:auto;width:9px;height:9px;border-radius:50%;background:var(--ok);flex-shrink:0;display:inline-block;"></span></div>'
+    +'<div class="card" style="padding:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><div style="font-size:14px;font-weight:600;flex:1;">Draft message</div>'+chip(mi('auto_awesome',9,'var(--aiva-ink)',1)+' AIVA drafted','ai')+'</div><div style="background:var(--bg-alt);border-radius:var(--r8);padding:12px;font-size:13px;line-height:1.6;"><b>Customer:</b> Juan Gonzalez &middot; 2026 Elantra SEL #H9637<br><b>Deal:</b> '+S.qDealType+' &middot; $'+S.qDown+' down &middot; target $'+S.qTarget+'/mo<br><b>Trade:</b> 2022 Elantra SEL &middot; est. $4,573<br><b>Step:</b> '+STEPS[S.step]+' ('+((S.step+1))+' of 7)<br><br><span style="color:var(--ink-mid);">Customer pushed back on $475, wants closer to $400/mo. Baby on the way, prioritizing safety + MPG. Eager to test drive today.</span></div><textarea class="inp" rows="2" style="margin-top:12px;resize:none;font-size:13px;line-height:1.5;" placeholder="Add a note&hellip;"></textarea></div>'
+    +'<button onclick="sendDesk()" class="btn b-p b-full b-lg">'+mi('send',18,'',1)+' Send to Brandon</button>'
+    +(S.deskSent?'<div style="padding:14px;border-radius:var(--r12);background:var(--ok-soft);border:1px solid var(--ok-border);animation:fade-up .3s ease-out;">'+av('Brandon Goss',28,'#9B5C00')+'<div style="font-size:13px;font-weight:600;color:var(--ok);margin-bottom:6px;">&nbsp;Brandon replied &middot; just now</div><div style="font-size:14px;line-height:1.5;margin-bottom:12px;">Approved &mdash; push to $415/mo and we\'ll make it work. Send him for the test drive. '+chip('&#10003; Approved','ok')+'</div><button onclick="nav(\'credit\')" class="btn b-ok b-full b-md">'+mi('arrow_forward',17,'',1)+' Continue to Credit App</button></div>':'')
+    +'</div></div>';
+}
+
+function screenCredit(){
+  return '<div class="cbar"><button class="icon-btn" onclick="goBack()">'+mi('arrow_back',24)+'</button><div class="cbar-text"><div class="cbar-title">Credit Application</div><div class="cbar-sub">'+S.apt.name+'</div></div></div>'
+    +wizBar()+aivaBanner()
+    +'<div class="scroll-body ani-in"><div style="padding:14px;display:flex;flex-direction:column;gap:14px;padding-bottom:28px;">'
+    +'<div class="card" style="padding:16px;"><div style="font-size:15px;font-weight:600;margin-bottom:4px;">Send secure link</div><div style="font-size:13px;color:var(--ink-mid);margin-bottom:14px;">Customer completes on their own device &mdash; recommended.</div><div style="display:flex;gap:10px;margin-bottom:12px;"><div style="flex:1;"><label class="lbl">Cell</label><input class="inp" type="tel" value="(555) 123-4567"/></div><div style="flex:1;"><label class="lbl">Email</label><input class="inp" type="email" value="juan.gonz&hellip;"/></div></div><button onclick="sendCreditLink()" class="btn b-p b-full b-md">'+mi('send',16,'',1)+' Send secure link</button></div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--ink-soft);font-weight:500;">&mdash; or fill in-app &mdash;</div>'
+    +'<div class="card" style="padding:16px;"><div style="font-size:15px;font-weight:600;margin-bottom:14px;">In-app entry</div>'
+    +[['Full legal name','Juan M. Gonzalez','text'],['Date of birth','1985-07-14','date'],['Employer','Tampa Bay Ops LLC','text'],['Annual income','$87,500','text'],['Housing','Own &middot; $1,450/mo','text']].map(function(r){return '<div style="margin-bottom:14px;"><label class="lbl">'+r[0]+'</label><input class="inp" type="'+r[2]+'" value="'+r[1]+'"/></div>';}).join('')
+    +'<div style="padding:10px;background:var(--aiva-soft);border:1px solid var(--aiva-border);border-radius:var(--r8);font-size:12px;color:var(--aiva-ink);display:flex;align-items:center;gap:6px;margin-bottom:14px;">'+mi('shield',14,'var(--aiva-d)',1)+' AIVA does not auto-fill credit fields &mdash; PII requires direct human entry.</div>'
+    +'<button onclick="submitCredit()" class="btn b-p b-full b-md">'+mi('check',16,'',1)+' Submit application</button></div></div></div>';
+}
+
+function screenDone(){
+  var cols=['#196FE1','#7B61FF','#0E8345','#B8730F','#EB0000'];
+  var bits='';
+  for(var i=0;i<20;i++){bits+='<div class="cbit" style="left:'+(Math.random()*100)+'%;background:'+cols[i%5]+';animation-delay:'+(Math.random()*.9)+'s;animation-duration:'+(1.2+Math.random()*.7)+'s;"></div>';}
+  return '<div class="deal-done"><div class="confetti-w">'+bits+'</div>'
+    +'<div style="width:80px;height:80px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:check-pop .4s cubic-bezier(.17,.67,.3,1.3) both;">'+mi('check',44,'#fff',1)+'</div>'
+    +'<div style="font-size:26px;font-weight:700;text-align:center;margin-bottom:8px;">Deal complete!</div>'
+    +'<div style="font-size:15px;color:var(--ink-mid);text-align:center;margin-bottom:6px;">'+S.apt.name+'</div>'
+    +'<div style="font-size:14px;color:var(--ok);font-weight:500;text-align:center;margin-bottom:28px;">2026 Elantra SEL &middot; Finance &middot; $415/mo</div>'
+    +'<div style="width:100%;background:var(--aiva-soft);border:1px solid var(--aiva-border);border-radius:var(--r12);padding:14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:20px;"><div class="aiva-orb pulse"></div><div><div style="font-size:11px;font-weight:700;color:var(--aiva-ink);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">AIVA deal recap</div><div style="font-size:13px;line-height:1.5;">Session logged &middot; 4 F.O.R.M. fields captured &middot; Desk chat drafted in 0.8s &middot; Credit link sent in 1 tap. Saved approx. <b>12 minutes</b> of data entry.</div></div></div>'
+    +'<div style="display:flex;flex-direction:column;gap:10px;width:100%;">'
+    +'<button onclick="toast(\'Service follow-up scheduled\')" class="btn b-p b-full b-md">'+mi('event',16,'',1)+' Schedule service follow-up</button>'
+    +'<button onclick="toast(\'Referral request sent\')" class="btn b-s b-full b-md">'+mi('share',16,'var(--brand)')+' Request a referral</button>'
+    +'<button onclick="backToMyDay()" class="btn b-g b-full b-md" style="color:var(--ink-mid);">'+mi('home',16,'var(--ink-mid)')+' Back to My Day</button>'
+    +'</div></div>';
+}
+
+function scanOverlay(){
+  if(S.screen!=='scan')return'';
+  var st=S.scanStage,locked=st==='confirm';
+  return '<div class="scan-overlay">'
+    +'<div style="padding:14px 16px;display:flex;align-items:center;gap:12px;color:#fff;flex-shrink:0;">'
+    +'<button onclick="closeScan()" style="background:none;border:none;color:#fff;cursor:pointer;display:flex;">'+mi('close',24,'#fff')+'</button>'
+    +'<span style="font-size:16px;font-weight:500;flex:1;">Smart Scan</span>'
+    +chip(mi('auto_awesome',9,'#fff',1)+' AIVA assist','dk')+'</div>'
+    +'<div class="scan-vf">'
+    +'<div style="position:absolute;top:14%;left:0;right:0;text-align:center;font-size:13px;color:'+(locked?'#4ADE80':'#fff')+';font-weight:'+(locked?600:400)+';">'+(st==='aim'?'Frame document inside the box':st==='lock'?'Detecting&hellip;':mi('check_circle',16,'#4ADE80',1)+' License detected')+'</div>'
+    +'<div class="scan-reticle" style="border-color:'+(locked?'#4ADE80':'#fff')+';">'
+    +'<div class="scorn tl"></div><div class="scorn tr"></div><div class="scorn bl"></div><div class="scorn br"></div>'
+    +(st==='lock'?'<div class="scan-line"></div>':'')+'</div></div>'
+    +'<div style="display:flex;gap:6px;padding:10px 16px 12px;background:#000;justify-content:center;">'
+    +['Auto detect','License','VIN','Insurance'].map(function(lb,i){return '<button onclick="toast(\''+lb+' mode\')" style="background:'+(i===0?'#fff':'rgba(255,255,255,.12)')+';color:'+(i===0?'#000':'#fff')+';border:none;border-radius:var(--rpill);padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;">'+lb+'</button>';}).join('')+'</div>'
+    +(locked?'<div style="background:#fff;border-radius:16px 16px 0 0;padding:14px 16px 22px;animation:slide-up-sheet .3s ease-out;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'+mi('check_circle',20,'var(--ok)',1)+'<div style="font-size:15px;font-weight:600;flex:1;">Driver\'s license captured</div>'+chip(mi('auto_awesome',9,'var(--aiva-ink)',1)+' AIVA','ai')+'</div>'
+    +[['Name','Juan M. Gonzalez'],['DL #','FL D123-456-78-901'],['DOB','1985-07-14'],['Expires','2029-07-14'],['Address','123 Main St, Tampa FL']].map(function(r){return '<div style="display:flex;gap:12px;padding:6px 0;border-bottom:1px solid var(--div-soft);"><div style="font-size:12px;color:var(--ink-mid);width:72px;flex-shrink:0;">'+r[0]+'</div><div style="font-size:13px;font-weight:500;">'+r[1]+'</div></div>';}).join('')
+    +'<div style="display:flex;gap:8px;margin-top:14px;"><button onclick="S.scanStage=\'aim\';re()" class="btn b-s b-md" style="flex:1;">'+mi('refresh',15,'var(--brand)')+' Retake</button><button onclick="confirmScan()" class="btn b-p b-md" style="flex:2;">'+mi('check',15,'',1)+' Save to '+S.apt.name+'</button></div></div>':'')
+    +'</div>';
+}
+
+/* ═══════════════════════════════════════
+   MASTER RENDER
+═══════════════════════════════════════ */
+function re(){
+  var screenFn={
+    signin:screenSignin,myday:screenMyDay,leads:screenLeads,
+    search:screenSearch,customer:screenCustomer,session:screenSession,
+    quote:screenQuote,desk:screenDesk,credit:screenCredit,done:screenDone,
+    scan:screenMyDay
+  }[S.screen]||screenMyDay;
+
+  document.getElementById('phone').innerHTML=
+    '<div class="screen-wrap">'+screenFn()+scanOverlay()+'</div>'+bnav();
+}
+
+/* ═══════════════════════════════════════
+   ACTIONS
+═══════════════════════════════════════ */
+window.doSignIn=function(){S.screen='myday';S.tab='myday';re();};
+window.toggleAiva=function(){S.aiva=S.aiva==='off'?'passive':'off';toast(S.aiva!=='off'?'AIVA on \u2014 say \u201cHey AIVA\u201d':'AIVA off');re();};
+window.toggleMic=function(){S.aiva=S.aiva==='listening'?'passive':'listening';re();};
+window.toggleShowroom=function(){S.showroom=!S.showroom;if(S.showroom){S.aiva='listening';toast('Customer in showroom \u00b7 AIVA listening');}else toast('Showroom mode ended');re();};
+window.openCustomer=function(id){S.apt=APTS.filter(function(a){return a.id===id;})[0]||APTS[0];S.step=S.apt.step||0;S.prev=S.screen;S.screen='customer';S.ctab='overview';if(S.apt.inShowroom){S.showroom=true;S.aiva='listening';}re();};
+window.setCTab=function(t){S.ctab=t;re();};
+window.setSTab=function(t){S.stab=t;re();};
+window.nav=function(sc){S.prev=S.screen;S.screen=sc;if(sc==='session'&&S.aiva==='off')S.aiva='listening';if(sc==='quote')S.dealStage=0;if(sc==='desk')S.dealStage=1;if(sc==='credit')S.dealStage=2;re();};
+window.goBack=function(){var map={session:'customer',quote:'session',desk:'quote',credit:'desk',customer:(S.tab==='cust'?'search':'myday')};S.screen=map[S.screen]||'myday';re();};
+window.setTab=function(id){S.tab=id;if(id==='myday')S.screen='myday';else if(id==='leads')S.screen='leads';else if(id==='cust')S.screen='search';else toast(id==='inv'?'Inventory coming soon':'Conversations coming soon');re();};
+window.openScan=function(){if(S.scanTimer)clearTimeout(S.scanTimer);S.scanStage='aim';S.prev=S.screen;S.screen='scan';re();S.scanTimer=setTimeout(function(){S.scanStage='lock';re();S.scanTimer=setTimeout(function(){S.scanStage='confirm';re();},1800);},900);};
+window.closeScan=function(){if(S.scanTimer)clearTimeout(S.scanTimer);S.screen=S.prev||'myday';re();};
+window.confirmScan=function(){closeScan();toast('License saved to '+S.apt.name);};
+window.sendDesk=function(){S.deskSent=true;re();toast('Sent to Brandon \u2713');};
+window.sendCreditLink=function(){toast('Secure credit link sent to Juan');setTimeout(function(){S.dealStage=2;re();},400);};
+window.submitCredit=function(){S.dealStage=3;S.screen='done';re();};
+window.backToMyDay=function(){S.screen='myday';S.tab='myday';S.deskSent=false;S.dealStage=0;S.showroom=false;APTS[0].inShowroom=false;re();};
+
+document.addEventListener('DOMContentLoaded',function(){re();});
+</script>
+</html>
